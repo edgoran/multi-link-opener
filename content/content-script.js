@@ -8,10 +8,10 @@ if (!window.__linkGrabInjected) {
 
             if (!selection || selection.rangeCount === 0) {
                 sendResponse({ urls: [] });
-                return;
+                return true;
             }
 
-            const urls = [];
+            const urls = new Set();
 
             // Get all ranges in the selection
             for (let i = 0; i < selection.rangeCount; i++) {
@@ -26,7 +26,7 @@ if (!window.__linkGrabInjected) {
                     // Remove trailing slash for consistency
                     href = href.replace(/\/+$/, "");
                     if (href.startsWith("http://") || href.startsWith("https://")) {
-                        urls.push(href);
+                        urls.add(href);
                     }
                 });
 
@@ -36,12 +36,12 @@ if (!window.__linkGrabInjected) {
                 const textUrls = textContent.match(urlPattern) || [];
                 textUrls.forEach(url => {
                     const cleaned = url.replace(/[.,;:!?)}\]]+$/, "");
-                    urls.push(cleaned);
+                    urls.add(cleaned);
                 });
             }
 
-            sendResponse({ urls });
-            return;
+            sendResponse({ urls: [...urls] });
+            return true;
         }
     });
 }

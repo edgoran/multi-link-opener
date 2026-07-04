@@ -7,7 +7,11 @@
     function countLinksInSelection() {
         const selection = window.getSelection();
         if (!selection || selection.rangeCount === 0 || selection.isCollapsed) {
-            chrome.runtime.sendMessage({ type: "SELECTION_LINK_COUNT", count: 0 });
+            try {
+                chrome.runtime.sendMessage({ type: "SELECTION_LINK_COUNT", count: 0 });
+            } catch (e) {
+                // Extension context invalidated (e.g. after update/reload)
+            }
             return;
         }
 
@@ -37,7 +41,11 @@
             });
         }
 
-        chrome.runtime.sendMessage({ type: "SELECTION_LINK_COUNT", count: urls.size });
+        try {
+            chrome.runtime.sendMessage({ type: "SELECTION_LINK_COUNT", count: urls.size });
+        } catch (e) {
+            // Extension context invalidated (e.g. after update/reload)
+        }
     }
 
     document.addEventListener("selectionchange", () => {

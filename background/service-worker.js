@@ -29,6 +29,33 @@ function extractUrlsFromText(text) {
     });
 }
 
+// Send message to tab with retry logic
+async function sendMessageWithRetry(tabId, message, maxRetries = 3, delayMs = 100) {
+    for (let attempt = 0; attempt < maxRetries; attempt++) {
+        if (attempt > 0) {
+            await new Promise(resolve => setTimeout(resolve, delayMs));
+        }
+
+        try {
+            const response = await new Promise((resolve, reject) => {
+                chrome.tabs.sendMessage(tabId, message, (response) => {
+                    if (chrome.runtime.lastError) {
+                        reject(new Error(chrome.runtime.lastError.message));
+                    } else {
+                        resolve(response);
+                    }
+                });
+            });
+            return response;
+        } catch (e) {
+            if (attempt === maxRetries - 1) {
+                return null;
+            }
+        }
+    }
+    return null;
+}
+
 // Inject content script and get links from selection
 async function getLinksFromSelection(tabId) {
     try {
@@ -41,18 +68,8 @@ async function getLinksFromSelection(tabId) {
         return null;
     }
 
-    await new Promise(resolve => setTimeout(resolve, 100));
-
-    return new Promise((resolve) => {
-        chrome.tabs.sendMessage(tabId, { type: "GET_SELECTED_LINKS" }, (response) => {
-            if (chrome.runtime.lastError) {
-                console.warn("Message error:", chrome.runtime.lastError.message);
-                resolve(null);
-            } else {
-                resolve(response ? response.urls : null);
-            }
-        });
-    });
+    const response = await sendMessageWithRetry(tabId, { type: "GET_SELECTED_LINKS" });
+    return response ? response.urls : null;
 }
 
 // Show preview overlay in the tab
@@ -67,17 +84,8 @@ async function showPreview(tabId, urls) {
         return false;
     }
 
-    await new Promise(resolve => setTimeout(resolve, 100));
-
-    return new Promise((resolve) => {
-        chrome.tabs.sendMessage(tabId, { type: "SHOW_PREVIEW", urls }, (response) => {
-            if (chrome.runtime.lastError) {
-                resolve(false);
-            } else {
-                resolve(true);
-            }
-        });
-    });
+    const response = await sendMessageWithRetry(tabId, { type: "SHOW_PREVIEW", urls });
+    return response !== null;
 }
 
 // Show badge with count
@@ -115,9 +123,9 @@ async function loadSettings() {
 
 // Open URLs based on user settings
 async function openUrls(urls, settings) {
-    const removeDuplicates = settings.removeDuplicates !== false;
-    const focusFirstTab = settings.focusFirstTab || false;
-    const maxTabs = settings.maxTabs || 20;
+    const removeDuplicates = settings.removeDuplicates;
+    const focusFirstTab = settings.focusFirstTab;
+    const maxTabs = settings.maxTabs;
     const openMode = settings.openMode || "normal";
 
     if (removeDuplicates) {
@@ -253,8 +261,8 @@ chrome.commands.onCommand.addListener(async (command) => {
         try {
             await chrome.scripting.executeScript({
                 target: { tabId: tab.id },
-                func: (text) => {
-                    navigator.clipboard.writeText(text);
+                func: async (text) => {
+                    await navigator.clipboard.writeText(text);
                 },
                 args: [urls.join("\n")]
             });

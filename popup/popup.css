@@ -143,13 +143,6 @@ body {
     color: var(--text-secondary);
 }
 
-.section-toggle-icon {
-    width: 16px;
-    height: 16px;
-    fill: var(--text-secondary);
-    transition: transform 0.2s ease;
-}
-
 .section-toggle[aria-expanded="false"] .section-toggle-icon {
     transform: rotate(-90deg);
 }

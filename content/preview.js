@@ -6,6 +6,12 @@
         chrome.runtime.onMessage.removeListener(window.__linkGrabPreviewListener);
     }
 
+    function escapeHtml(str) {
+        const div = document.createElement("div");
+        div.appendChild(document.createTextNode(str));
+        return div.innerHTML;
+    }
+
     function truncateUrl(url) {
         try {
             const parsed = new URL(url);
@@ -32,8 +38,8 @@
         <div class="lo-list">
           ${urls.map((url, i) => `
             <label class="lo-item">
-              <input type="checkbox" checked data-index="${i}" data-url="${url}">
-              <span class="lo-url" title="${url}">${truncateUrl(url)}</span>
+              <input type="checkbox" checked data-index="${i}" data-url="${escapeHtml(url)}">
+              <span class="lo-url" title="${escapeHtml(url)}">${escapeHtml(truncateUrl(url))}</span>
             </label>
           `).join("")}
         </div>
